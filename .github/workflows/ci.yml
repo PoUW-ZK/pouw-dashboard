@@ -17,7 +17,7 @@ jobs:
     name: ci-ok
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Detect project
         id: detect
@@ -28,7 +28,7 @@ jobs:
             echo "::notice::package.json does not yet exist; the checks are skipped."
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: steps.detect.outputs.node == 'true'
         with:
           node-version: 22
