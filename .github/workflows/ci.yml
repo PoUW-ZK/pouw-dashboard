@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-ok:
+    name: ci-ok
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect project
+        id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "node=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::package.json does not yet exist; the checks are skipped."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.node == 'true'
+        with:
+          node-version: 22
+
+      - name: Install
+        if: steps.detect.outputs.node == 'true'
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Lint
+        if: steps.detect.outputs.node == 'true'
+        run: npm run lint --if-present
+
+      - name: Test
+        if: steps.detect.outputs.node == 'true'
+        run: npm test --if-present
+
+      - name: Build
+        if: steps.detect.outputs.node == 'true'
+        run: npm run build --if-present
+
+      - name: Vulnerable dependencies (npm audit)
+        if: steps.detect.outputs.node == 'true'
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Dockerfile lint (hadolint)
+        if: hashFiles('Dockerfile') != ''
+        run: docker run --rm -i hadolint/hadolint < Dockerfile

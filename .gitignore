@@ -1,3 +1,9 @@
+# OS a editory
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
 # Logs
 logs
 *.log
@@ -32,7 +38,17 @@ coverage
 bower_components
 
 # node-waf configuration
+node_modules/
+dist/
+coverage/
+.vite/
+*.local
 .lock-wscript
+
+# Playwright
+test-results/
+playwright-report/
+
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
