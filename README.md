@@ -18,10 +18,12 @@ in pouw-docs. The reasons for the setup are in
 
 ## How the API works
 
-Hasura serves GraphQL over the database of
-[pouw-indexer](https://github.com/PoUW-ZK/pouw-indexer). It does not track the
-indexer's tables. It tracks only **views in the schema `api`**, and those views
-are the API:
+The database schema is owned by
+[pouw-indexer](https://github.com/PoUW-ZK/pouw-indexer) (Alembic). Hasura only
+tracks it. That is why `hasura/` has no `migrations/`.
+
+Hasura does not track the indexer's tables. It tracks only **views in the
+schema `api`**, and those views are the API:
 
 - A view is a saved `SELECT` over the indexer's tables. It holds no data, and
   Hasura queries it like a table.
@@ -34,11 +36,11 @@ are the API:
 - The role `anonymous` (every request without a token) can only select from
   the views, at most 100 rows per list. There are no mutations.
 
-The views are defined in `hasura/seeds/default/05_api_views.sql`. They are not
-Hasura migrations, because the Hasura image applies the metadata before its
-migrations, and the metadata refers to the views. Once pouw-indexer has
-Alembic migrations, the views move there as one migration, and
-`00_schema.sql` is deleted.
+Until pouw-indexer has migrations, `hasura/seeds/default/*.sql` create the
+tables and the views. The views can not be Hasura migrations, because the
+Hasura image applies the metadata before its migrations, and the metadata
+refers to the views. Once pouw-indexer has Alembic migrations, the views move
+there as one migration, and `00_schema.sql` is deleted.
 
 | File in `hasura/seeds/default/` | What                                                  |
 | ------------------------------- | ----------------------------------------------------- |
@@ -99,23 +101,33 @@ reset the database as above. Adding a column at the end of a view keeps the
 contract. Removing or renaming a field changes it, and needs a pull request in
 pouw-docs together with the frontend.
 
-**Metadata** (tracking, relationships, permissions): edit the YAML files in
-`hasura/metadata/` and apply them to the running Hasura:
+**Metadata** (tracking, relationships, permissions): the files in
+`hasura/metadata/` are the source, commit every change there. Two ways to
+change them, both with the Hasura CLI in the same version as the image (see
+`hasura/Dockerfile`):
 
 ```bash
 export HASURA_GRAPHQL_ADMIN_SECRET=dev
+
+# 1. in the CLI console, which writes every change into hasura/metadata/
+hasura console --project hasura          # endpoint from hasura/config.yaml
+hasura metadata export --project hasura  # to be sure, then commit hasura/metadata
+
+# 2. or edit the YAML files and apply them
 hasura metadata apply --project hasura
 hasura metadata inconsistency list --project hasura   # must print nothing
 ```
 
-Changes clicked in the console live only in the running database. Export them
-with `hasura metadata export --project hasura` and commit the files. Use the
-CLI in the same version as the image (see `hasura/Dockerfile`).
+The console at `localhost:8081/console` is for browsing and trying queries.
+Changes clicked there live only in the running database until exported.
 
 ## CI
 
-The `hasura` job creates the schema (with `alembic upgrade head` from
-pouw-indexer once it has migrations), runs `hasura/seeds/default/*.sql` in name
-order, starts the image and checks the metadata consistency. The image refuses
-to start when the metadata references a view or column that does not exist, so
-a view that breaks the metadata fails the job.
+The `hasura` job in `.github/workflows/ci.yml` repeats a clean local start on
+every pull request: an empty Postgres, the indexer schema
+(`alembic upgrade head` from pouw-indexer once it has migrations), the seeds in
+name order, then the Hasura image. It fails when a view does not match the
+schema, or when the metadata refers to a view or column that does not exist.
+
+When pouw-indexer gets Alembic migrations, the job creates the tables from
+them, so `00_schema.sql` must be deleted in the same change.
