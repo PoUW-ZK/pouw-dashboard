@@ -1,0 +1,43 @@
+table:
+  name: blocks
+  schema: api
+configuration:
+  column_config: {}
+  custom_column_names: {}
+  custom_name: blocks
+  custom_root_fields: {}
+array_relationships:
+  - name: transfers
+    using:
+      manual_configuration:
+        column_mapping:
+          hash: block_hash
+        insertion_order: null
+        remote_table:
+          name: transfers
+          schema: api
+  - name: registrations
+    using:
+      manual_configuration:
+        column_mapping:
+          hash: registered_block
+        insertion_order: null
+        remote_table:
+          name: circuits
+          schema: api
+  - name: proofs
+    using:
+      manual_configuration:
+        column_mapping:
+          hash: block_hash
+        insertion_order: null
+        remote_table:
+          name: proofs
+          schema: api
+select_permissions:
+  - role: anonymous
+    permission:
+      columns: '*'
+      filter: {}
+      limit: 100
+    comment: ""

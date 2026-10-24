@@ -1,0 +1,15 @@
+table:
+  name: addresses
+  schema: api
+configuration:
+  column_config: {}
+  custom_column_names: {}
+  custom_name: addresses
+  custom_root_fields: {}
+select_permissions:
+  - role: anonymous
+    permission:
+      columns: '*'
+      filter: {}
+      limit: 100
+    comment: ""

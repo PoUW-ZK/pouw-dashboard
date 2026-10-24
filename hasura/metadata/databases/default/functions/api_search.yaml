@@ -1,0 +1,5 @@
+function:
+  name: search
+  schema: api
+configuration:
+  custom_name: search

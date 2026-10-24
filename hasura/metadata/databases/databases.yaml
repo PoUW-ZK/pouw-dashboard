@@ -1,5 +1,7 @@
 # The database of pouw-indexer. Its URL comes from the environment of the
 # Hasura container (PG_DATABASE_URL), the same in CI, locally and on staging.
+# Hasura tracks only the views in schema "api" (hasura/migrations), never the
+# indexer's own tables.
 - name: default
   kind: postgres
   configuration:
@@ -9,3 +11,4 @@
       isolation_level: read-committed
       use_prepared_statements: false
   tables: "!include default/tables/tables.yaml"
+  functions: "!include default/functions/functions.yaml"

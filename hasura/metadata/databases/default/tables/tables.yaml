@@ -1,1 +1,10 @@
-[]
+- "!include api_address_txs.yaml"
+- "!include api_addresses.yaml"
+- "!include api_blocks.yaml"
+- "!include api_circuits.yaml"
+- "!include api_miner_shares.yaml"
+- "!include api_proofs.yaml"
+- "!include api_search_hits.yaml"
+- "!include api_stats.yaml"
+- "!include api_transfers.yaml"
+- "!include api_useful_work.yaml"

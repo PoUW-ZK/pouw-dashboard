@@ -1,0 +1,40 @@
+# Local development: Postgres with the indexer schema, the api views and fake data,
+# and Hasura with the metadata of this repo. Not used for deployment (pouw-deploy).
+# See README.md, "Run locally".
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pouw
+      POSTGRES_PASSWORD: pouw
+      POSTGRES_DB: pouw
+    # 5433 on the host, so a Postgres already running on 5432 does not collide
+    ports: [ "127.0.0.1:5433:5432" ]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # runs the seeds in name order on the first start of a fresh volume, like CI
+      - ./hasura/seeds/default:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # over TCP: during the first start the init server listens only on the socket,
+      # so Hasura waits until the seeds are done
+      test: [ "CMD", "pg_isready", "-U", "pouw", "-h", "127.0.0.1" ]
+      interval: 5s
+      retries: 10
+
+  hasura:
+    build: ./hasura
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: [ "127.0.0.1:8081:8080" ] # hasura/config.yaml points the CLI at 8081
+    environment:
+      PG_DATABASE_URL: postgres://pouw:pouw@postgres:5432/pouw
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://pouw:pouw@postgres:5432/pouw
+      HASURA_GRAPHQL_ADMIN_SECRET: dev # local only
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+      # console at http://localhost:8081/console, for browsing and trying queries.
+      # Metadata changes belong in hasura/metadata/ (see README.md).
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true" # detailed errors, local only
+
+volumes:
+  pgdata:

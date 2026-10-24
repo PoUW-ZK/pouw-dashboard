@@ -1,0 +1,34 @@
+table:
+  name: proofs
+  schema: api
+configuration:
+  column_config: {}
+  custom_column_names: {}
+  custom_name: proofs
+  custom_root_fields: {}
+object_relationships:
+  - name: block
+    using:
+      manual_configuration:
+        column_mapping:
+          block_hash: hash
+        insertion_order: null
+        remote_table:
+          name: blocks
+          schema: api
+  - name: circuit
+    using:
+      manual_configuration:
+        column_mapping:
+          circuit_id: circuit_id
+        insertion_order: null
+        remote_table:
+          name: circuits
+          schema: api
+select_permissions:
+  - role: anonymous
+    permission:
+      columns: '*'
+      filter: {}
+      limit: 100
+    comment: ""
