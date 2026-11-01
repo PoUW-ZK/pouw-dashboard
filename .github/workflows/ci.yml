@@ -170,6 +170,26 @@ jobs:
           echo
           jq -e '.data.blocks | length > 0' result.json >/dev/null
 
+      # Every operation of the contract (pouw-docs/contracts/web-api.graphql) against the
+      # seed data: shape, conventions and values, see hasura/tests/test_contract.py
+      - uses: actions/checkout@v7
+        with:
+          repository: PoUW-ZK/pouw-docs
+          path: docs
+          ref: web-api-contract
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Contract queries (pytest)
+        env:
+          HASURA_URL: http://localhost:8080
+          WEB_API_GRAPHQL: docs/contracts/web-api.graphql
+        run: |
+          pip install -q -r hasura/tests/requirements.txt
+          python -m pytest hasura/tests -p no:cacheprovider -v
+
   # The only required check in the ruleset of main
   ci-ok:
     name: ci-ok
