@@ -176,7 +176,6 @@ jobs:
         with:
           repository: PoUW-ZK/pouw-docs
           path: docs
-          ref: web-api-contract
 
       - uses: actions/setup-python@v7
         with:
