@@ -47,11 +47,11 @@ The local `compose.yml` has no indexer, so the seeds stand in for its
 migrations. CI applies the real migrations of pouw-indexer instead of the
 first two seeds, so a seed that drifts from them shows up there.
 
-| File in `hasura/seeds/default/` | What                                                                  |
-| ------------------------------- | --------------------------------------------------------------------- |
-| `00_schema.sql`                 | Copy of `pouw-indexer/migrations/0001_schema_v0.sql` (local only)     |
-| `05_api_views.sql`              | Copy of `pouw-indexer/migrations/0002_api_views.sql` (local only)     |
-| `10_seed.sql`                   | Fake data: one small chain, see below                                 |
+| File in `hasura/seeds/default/` | What                                                              |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `00_schema.sql`                 | Copy of `pouw-indexer/migrations/0001_schema_v0.sql` (local only) |
+| `05_api_views.sql`              | Copy of `pouw-indexer/migrations/0002_api_views.sql` (local only) |
+| `10_seed.sql`                   | Fake data: one small chain, see below                             |
 
 A change of the views is a new migration in pouw-indexer (an applied
 migration never changes), plus the same change in `05_api_views.sql` and,
@@ -130,13 +130,39 @@ hasura metadata inconsistency list --project hasura   # must print nothing
 The console at `localhost:8081/console` is for browsing and trying queries.
 Changes clicked there live only in the running database until exported.
 
+## Query tests
+
+`hasura/tests/` runs every operation of the contract
+([web-api.graphql](https://github.com/PoUW-ZK/pouw-docs/blob/main/contracts/web-api.graphql))
+against Hasura with the seed data, as the role `anonymous`:
+
+- each operation returns data with exactly the selected fields, and the values
+  follow the contract (prefixed ids, hex `eta`/`mask`, ISO times, numbers);
+- the numbers of the seed chain (heights, fees, paging without gaps, search);
+- `anonymous` can not write and sees no indexer tables.
+
+With the local compose running and pouw-docs cloned next to this repository:
+
+```bash
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r hasura/tests/requirements.txt
+pytest hasura/tests
+```
+
+`HASURA_URL` (default `http://localhost:8081`) and `WEB_API_GRAPHQL` (default
+`../pouw-docs/contracts/web-api.graphql`) point the tests elsewhere. A new
+operation in the contract is tested once it has its variables in `VARIABLES`
+in `test_contract.py`. A change of `10_seed.sql` may need the expected values
+there updated.
+
 ## CI
 
 The `hasura` job in `.github/workflows/ci.yml` repeats a clean local start on
 every pull request: an empty Postgres, the migrations of pouw-indexer `main`,
 the seeds in name order (without those the migrations already cover), then the
 Hasura image. It fails when a view does not match the schema, or when the
-metadata refers to a view or column that does not exist.
+metadata refers to a view or column that does not exist. Then it runs the
+query tests against that Hasura, with the contract from pouw-docs `main`.
 
 The whole network (indexer, Hasura with this metadata, explorer) with your
 local changes: `make dev` in pouw-deploy next to this clone.
