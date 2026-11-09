@@ -1,32 +1,24 @@
-# React + TypeScript + Vite
+# PoUW Explorer frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite + TypeScript, with React Router for navigation and TanStack Query for request caching and refresh.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run `npm ci`, then `npm run dev` from this directory. The Vite server proxies `/v1/graphql` to Hasura at `http://localhost:8081`. Start the local backend with Docker Compose from the repository root, as described in the root README.
 
-## React Compiler
+`npm run build` checks TypeScript and creates the production bundle in `dist/`. `npm run lint` runs the existing frontend linter. Production nginx supports direct navigation to every frontend route.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Structure
 
-## Expanding the Oxlint configuration
+- `app/router.tsx`: routes and the shared app layout.
+- `components/layout/`: branding, navigation, and page container.
+- `components/ui/`: statistic cards, feedback states, links, pagination, and section headings.
+- `features/`: dashboard and block API hooks and domain components; search form.
+- `pages/`: home, block and circuit lists, mining, search, details, and not-found views.
+- `lib/`: the existing anonymous Hasura client, query cache, formatting, and URL pagination.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+The wireframe preview uses deterministic mock data by default, including dashboard statistics, blocks, circuits, mining, search, and detail pages. Copy `.env.example` to `.env.local` and set `VITE_USE_MOCKS=false` to connect to the existing Hasura API. Restart Vite after changing this setting. Balance and mining rewards are preview-only fields; the live API displays a dash for these unavailable values. Queries refresh every 30 seconds. The blocks list uses a height cursor and shows 12 rows per page. Home previews four blocks. Circuit lists and address and circuit histories show 20 rows per page. A block’s transfers, registrations, and proofs have separate cursors. Miner shares display up to 100 rows, matching the anonymous API limit.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+Search accepts block heights and complete prefixed identifiers: `blk:`, `tx:`, `proof:`, `circ:`, and `addr:`. A transaction lookup checks transfers, circuit registrations, and proof requests. Orphaned records remain accessible through their identifiers and show their canonical status.
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+“Useful work” uses the API's `useful_work` view: total constraints represented by canonical proofs. Average block interval covers the canonical chain. Coin transaction counts include transfers and circuit registrations.
