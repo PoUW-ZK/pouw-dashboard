@@ -35,3 +35,13 @@ INSERT INTO proof_txs (block_hash, position, proof_hash, request_txid, circuit_i
   (pg_temp.h('blk-2'), 0, pg_temp.h('proof-1'), pg_temp.h('req-1'), pg_temp.h('reg-sha'),   pg_temp.h('client-d'), 120, 0, 0, 192, 4096,  pg_temp.h('wit-1'), 2, pg_temp.f('eta-1'), pg_temp.f('mask-1')),
   (pg_temp.h('blk-2'), 1, pg_temp.h('proof-2'), pg_temp.h('req-2'), pg_temp.h('reg-image'), pg_temp.h('client-c'), 95,  2, 0, 768, 65536, pg_temp.h('wit-2'), 3, pg_temp.f('eta-2'), pg_temp.f('mask-2')),
   (pg_temp.h('blk-3'), 1, pg_temp.h('proof-3'), pg_temp.h('req-3'), pg_temp.h('reg-sha'),   pg_temp.h('client-c'), 110, 3, 1, 192, 4096,  pg_temp.h('wit-3'), 2, pg_temp.f('eta-3'), pg_temp.f('mask-3'));
+
+-- The statistics (api.stats, api.miner_shares, api.useful_work) are materialized views
+-- since indexer migration 0003, filled by api.refresh_stats(). The indexer calls it after
+-- each commit; the seed has to call it too. Without 0003 they are plain views, nothing to do.
+DO $$
+BEGIN
+    IF to_regprocedure('api.refresh_stats()') IS NOT NULL THEN
+        PERFORM api.refresh_stats();
+    END IF;
+END $$;
