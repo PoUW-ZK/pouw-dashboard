@@ -2,6 +2,12 @@
 # and Hasura with the metadata of this repo. Not used for deployment (pouw-deploy).
 # See README.md, "Run locally".
 services:
+  web:
+    build: ./web
+    depends_on:
+      - hasura
+    ports: [ "127.0.0.1:8080:8080" ]
+
   postgres:
     image: postgres:16
     environment:
