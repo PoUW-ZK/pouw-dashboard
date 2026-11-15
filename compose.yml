@@ -35,5 +35,30 @@ services:
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_DEV_MODE: "true" # detailed errors, local only
 
+  # Mock block source (pouw-dashboard#46): adds one fake block every few seconds, so the
+  # explorer gets live data without a node. Only with: docker compose --profile mock up -d
+  mock-blocks:
+    image: postgres:16
+    profiles: [ mock ]
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      PGHOST: postgres
+      PGUSER: pouw
+      PGPASSWORD: pouw
+      PGDATABASE: pouw
+      MOCK_BLOCK_INTERVAL: ${MOCK_BLOCK_INTERVAL:-5} # seconds between blocks
+    volumes:
+      - ./hasura/mock:/mock:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        psql -v ON_ERROR_STOP=1 -q -f /mock/mock_blocks.sql
+        while true; do
+          echo "mock block $$(psql -At -c 'SELECT mock.add_block()')"
+          sleep "$$MOCK_BLOCK_INTERVAL"
+        done
+
 volumes:
   pgdata:

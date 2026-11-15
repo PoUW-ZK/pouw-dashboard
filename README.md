@@ -103,6 +103,22 @@ The seed runs only on a fresh database. After changing it, run
 without a reset, insert rows with `psql`; a running subscription such as
 `LatestBlocks` shows a new block within a second.
 
+#### Live mock blocks
+
+For live data without a node, the `mock` profile adds a fake block every 5 seconds
+(`hasura/mock/mock_blocks.sql`): a known miner, a transfer and a proof on top of the
+current tip, then the statistics are refreshed.
+
+```bash
+docker compose --profile mock up -d          # with the mock
+docker compose logs -f mock-blocks           # "mock block 4", "mock block 5", ...
+MOCK_BLOCK_INTERVAL=2 docker compose --profile mock up -d mock-blocks   # other interval
+docker compose stop mock-blocks              # stop adding blocks
+```
+
+The query tests expect only the seed, so run them without the mock, after
+`docker compose down -v && docker compose up -d --build`.
+
 ## Changing the API
 
 **A view** (new field, follow a schema change): edit `05_api_views.sql`, then
