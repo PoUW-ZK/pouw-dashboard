@@ -20,6 +20,7 @@ from conftest import FRAGMENTS, OPERATIONS, seed_id
 BLOCK_2 = seed_id("blk:", "blk-2")
 BLOCK_3_ORPHANED = seed_id("blk:", "blk-3b")
 TRANSFER_IN_TWO_BLOCKS = seed_id("tx:", "tx-pay-2")
+TRANSFER = seed_id("tx:", "tx-pay-1")
 PROOF_REQUEST = seed_id("tx:", "req-1")
 PROOF = seed_id("proof:", "proof-1")
 REGISTRATION = seed_id("tx:", "reg-sha")
@@ -266,6 +267,9 @@ def test_mining(run):
         (PROOF_REQUEST, "proof"),
         (REGISTRATION, "circuit"),
         (CLIENT, "address"),
+        (TRANSFER, "transfer"),
+        (PROOF, "proof"),
+        (CIRCUIT_GROTH16, "circuit"),
     ],
 )
 def test_search_finds(run, q, kind):
