@@ -62,12 +62,13 @@ if needed, `metadata/`. Open the two pull requests together.
 Needs Docker with Compose.
 
 ```bash
-docker compose up -d --build   # Postgres with the seed, then Hasura with metadata/
-docker compose ps              # both Up, postgres (healthy)
+docker compose up -d --build   # dashboard, Postgres with seed, and Hasura
+docker compose ps
 ```
 
 | What            | Where                                               |
 | --------------- | --------------------------------------------------- |
+| Dashboard       | <http://localhost:8080>                             |
 | GraphQL queries | `http://localhost:8081/v1/graphql`                  |
 | Subscriptions   | `ws://localhost:8081/v1/graphql`                    |
 | Console         | <http://localhost:8081/console>, admin secret `dev` |
@@ -76,7 +77,8 @@ docker compose ps              # both Up, postgres (healthy)
 
 The frontend sends no secret and runs as `anonymous`, like in production. In
 the console, untick the `x-hasura-admin-secret` header in the API tab to see
-the same.
+the same. The dashboard proxies `/v1/graphql` to Hasura, so browser requests use
+the same-origin route and do not expose the admin secret.
 
 Stop with `docker compose stop`. `docker compose down -v` also deletes the
 database, and the next `up` starts from the seed again.
