@@ -10,6 +10,7 @@ FROM hasura/graphql-engine:v2.51.1.cli-migrations-v3
 ENV HASURA_GRAPHQL_DISALLOW_INCONSISTENT_METADATA=true \
     HASURA_GRAPHQL_UNAUTHORIZED_ROLE=anonymous \
     HASURA_GRAPHQL_ENABLE_TELEMETRY=false \
+    HASURA_GRAPHQL_ENABLE_ALLOWLIST=true \
     HOME=/tmp
 
 COPY metadata /hasura-metadata

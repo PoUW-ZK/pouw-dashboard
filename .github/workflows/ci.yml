@@ -162,13 +162,14 @@ jobs:
           echo
           jq -e '.is_consistent' result.json >/dev/null
 
-      # The explorer's path: no token, role anonymous, views with the seed data
-      - name: Anonymous reads the API
+      # The explorer's path: no token, role anonymous. Only the operations of the contract
+      # run (hasura/metadata/query_collections.yaml); anything else is rejected (#47)
+      - name: Allow-list rejects an unknown query
         run: |
           curl -fsS http://localhost:8080/v1/graphql \
             -d '{"query": "{ blocks(limit: 1) { hash height } }"}' | tee result.json
           echo
-          jq -e '.data.blocks | length > 0' result.json >/dev/null
+          jq -e '.errors and .data == null' result.json >/dev/null
 
       # Every operation of the contract (pouw-docs/contracts/web-api.graphql) against the
       # seed data: shape, conventions and values, see hasura/tests/test_contract.py

@@ -40,6 +40,13 @@ services:
       # Metadata changes belong in hasura/metadata/ (see README.md).
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_DEV_MODE: "true" # detailed errors, local only
+      # Allow-list on, as in CI and on staging (pouw-dashboard#47): without the admin secret
+      # only the operations of the contract run. HASURA_ALLOWLIST=false in .env turns it off
+      # to try a query that is not in the contract yet. The console (admin) is never limited.
+      HASURA_GRAPHQL_ENABLE_ALLOWLIST: ${HASURA_ALLOWLIST:-true}
+      # Pages that may call Hasura from the browser directly: Vite dev server and CLI console.
+      # The explorer itself goes through the /v1 proxy, so it is same-origin.
+      HASURA_GRAPHQL_CORS_DOMAIN: http://localhost:5173, http://localhost:9695
 
   # Mock block source (pouw-dashboard#46): adds one fake block every few seconds, so the
   # explorer gets live data without a node. Only with: docker compose --profile mock up -d

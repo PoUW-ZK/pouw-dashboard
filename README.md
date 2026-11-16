@@ -148,6 +148,37 @@ hasura metadata inconsistency list --project hasura   # must print nothing
 The console at `localhost:8081/console` is for browsing and trying queries.
 Changes clicked there live only in the running database until exported.
 
+## Allow-list and limits
+
+Hasura runs with an **allow-list** (`HASURA_GRAPHQL_ENABLE_ALLOWLIST=true` in
+`hasura/Dockerfile`, so the same locally, in CI and on staging). A request
+without the admin secret (role `anonymous`, the explorer) runs only if its
+document is one of the operations of the
+[contract](https://github.com/PoUW-ZK/pouw-docs/blob/main/contracts/web-api.graphql).
+Anything else, introspection included, is rejected. The admin secret (console,
+CLI) bypasses the allow-list.
+
+- `hasura/metadata/query_collections.yaml` holds the allowed documents. It is
+  generated, never edited: after a change of the contract run
+  `python hasura/allowlist.py` and commit the file. The query tests fail while
+  it differs from the contract.
+- A client sends an operation exactly as the contract has it: the operation
+  followed by the fragments it uses. Whitespace and `__typename` do not
+  matter, the order of fields does. Over HTTP a live-query subscription
+  (`HomeStats`, `LatestBlocks`) is sent as a `query` with the same selection.
+- To try a query that is not in the contract yet, use the console, or start
+  Hasura with `HASURA_ALLOWLIST=false` in `.env` (local only).
+
+Limits: at most 100 rows per list and no aggregates for `anonymous`
+(permissions in `metadata/`). Depth, node and rate limits of Hasura are Cloud
+and Enterprise features only. With the allow-list, a client can only run the
+contract's operations, whose `limit` is at most 100. A rate limit belongs to the
+reverse proxy (pouw-deploy).
+
+CORS: the explorer calls Hasura through the `/v1` proxy (Vite locally, nginx in
+the image), same-origin. `HASURA_GRAPHQL_CORS_DOMAIN` in `compose.yml` lists
+the local pages that may call Hasura directly. On staging it is set in pouw-deploy.
+
 ## Query tests
 
 `hasura/tests/` runs every operation of the contract
@@ -158,6 +189,8 @@ against Hasura with the seed data, as the role `anonymous`:
   follow the contract (prefixed ids, hex `eta`/`mask`, ISO times, numbers);
 - the numbers of the seed chain (heights, fees, paging without gaps, search);
 - `anonymous` can not write and sees no indexer tables.
+- only the contract's operations run for `anonymous` (allow-list), and the
+  permissions in `metadata/` stay read-only with at most 100 rows.
 
 With the local compose running and pouw-docs cloned next to this repository:
 

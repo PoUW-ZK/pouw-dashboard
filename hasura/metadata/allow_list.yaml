@@ -1,1 +1,3 @@
-[]
+- collection: web-api
+  scope:
+    global: true

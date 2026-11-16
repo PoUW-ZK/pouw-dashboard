@@ -10,21 +10,18 @@ The requests carry no token, so they run as the role anonymous, like the explore
 
 import hashlib
 import os
+import sys
 from pathlib import Path
 
 import pytest
 import requests
-from graphql import OperationType, parse, print_ast
-from graphql.language import (
-    DocumentNode,
-    FragmentDefinitionNode,
-    FragmentSpreadNode,
-    OperationDefinitionNode,
-    Visitor,
-    visit,
-)
+from graphql import OperationType, parse
+from graphql.language import DocumentNode, FragmentDefinitionNode, OperationDefinitionNode
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "hasura"))
+from allowlist import entries, is_stream  # noqa: E402  the documents of the allow-list
+
 HASURA_URL = os.environ.get("HASURA_URL", "http://localhost:8081").rstrip("/")
 CONTRACT = Path(
     os.environ.get("WEB_API_GRAPHQL", REPO.parent / "pouw-docs" / "contracts" / "web-api.graphql")
@@ -58,13 +55,6 @@ def load_contract() -> DocumentNode:
     return doc
 
 
-def is_stream(op: OperationDefinitionNode) -> bool:
-    return any(
-        getattr(sel, "name", None) and sel.name.value.endswith("_stream")
-        for sel in op.selection_set.selections
-    )
-
-
 DOCUMENT = load_contract()
 ALL_OPERATIONS = {
     d.name.value: d for d in DOCUMENT.definitions if isinstance(d, OperationDefinitionNode)
@@ -77,22 +67,14 @@ FRAGMENTS = {
 }
 
 
+# The documents exactly as hasura/metadata/query_collections.yaml allows them
+TEXTS = entries(CONTRACT.read_text(encoding="utf-8"))
+
+
 def operation_text(name: str) -> str:
-    """One operation with only the fragments it uses, so a broken operation fails alone."""
-    needed, todo = {}, [ALL_OPERATIONS[name]]
-    while todo:
-        spreads = []
-
-        class Spreads(Visitor):
-            def enter_fragment_spread(self, node: FragmentSpreadNode, *_):
-                spreads.append(node.name.value)
-
-        visit(todo.pop(), Spreads())
-        for s in spreads:
-            if s not in needed:
-                needed[s] = FRAGMENTS[s]
-                todo.append(FRAGMENTS[s])
-    return print_ast(DocumentNode(definitions=[ALL_OPERATIONS[name], *needed.values()]))
+    """One operation with only the fragments it uses, as the allow-list has it. Over HTTP a
+    live-query subscription is sent as its query twin (<name>AsQuery)."""
+    return TEXTS.get(name + "AsQuery", TEXTS[name])
 
 
 def post(body: dict) -> dict:
@@ -108,7 +90,14 @@ def post(body: dict) -> dict:
 def database_is_the_seed():
     """The value tests expect exactly the seed chain (blocks 0 to 3). Stop at once with a
     clear message when the database holds more, e.g. while the mock-blocks service runs."""
-    body = post({"query": "{ stats { indexed_height } }"})
+    body = post({"query": operation_text("HomeStats")})
+    if body.get("errors"):
+        pytest.exit(
+            f"HomeStats failed: {body['errors']}. If the contract changed, update the "
+            "allow-list (python hasura/allowlist.py) and rebuild Hasura "
+            "(docker compose up -d --build hasura)",
+            returncode=2,
+        )
     height = (body.get("data") or {}).get("stats", [{}])[0].get("indexed_height")
     if height != 3:
         pytest.exit(

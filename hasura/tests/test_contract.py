@@ -283,6 +283,8 @@ def test_search_without_match_is_empty(run, q):
 
 
 # ------------------------------------------------------------------ 3. access of anonymous
+# With the allow-list on (#47) these documents are rejected before the permissions are
+# checked; the permissions themselves are checked in the metadata (test_allowlist.py).
 
 def test_anonymous_cannot_write(raw):
     body = raw("mutation { delete_blocks(where: {}) { affected_rows } }")
