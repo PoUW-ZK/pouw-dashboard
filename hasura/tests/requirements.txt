@@ -1,3 +1,5 @@
 pytest>=8
 requests>=2.32
 graphql-core>=3.2,<3.3
+websockets>=13
+psycopg[binary]>=3.2

@@ -44,18 +44,34 @@ def load_contract() -> DocumentNode:
             returncode=2,
         )
     doc = parse(CONTRACT.read_text(encoding="utf-8"))
-    # Hasura answers subscriptions only over WebSocket. Over HTTP the same selection is
-    # sent as a query, which reads the same views.
+    # Hasura answers subscriptions only over WebSocket. Over HTTP a live query (HomeStats,
+    # LatestBlocks) is sent as a query with the same selection, which reads the same views.
+    # A stream (root field *_stream) exists only in subscriptions: test_live.py tests it
+    # over WebSocket.
     for d in doc.definitions:
-        if isinstance(d, OperationDefinitionNode) and d.operation == OperationType.SUBSCRIPTION:
+        if (
+            isinstance(d, OperationDefinitionNode)
+            and d.operation == OperationType.SUBSCRIPTION
+            and not is_stream(d)
+        ):
             d.operation = OperationType.QUERY
     return doc
 
 
+def is_stream(op: OperationDefinitionNode) -> bool:
+    return any(
+        getattr(sel, "name", None) and sel.name.value.endswith("_stream")
+        for sel in op.selection_set.selections
+    )
+
+
 DOCUMENT = load_contract()
-OPERATIONS = {
+ALL_OPERATIONS = {
     d.name.value: d for d in DOCUMENT.definitions if isinstance(d, OperationDefinitionNode)
 }
+# operations over HTTP (test_contract.py) and streams over WebSocket (test_live.py)
+OPERATIONS = {n: op for n, op in ALL_OPERATIONS.items() if not is_stream(op)}
+STREAMS = {n: op for n, op in ALL_OPERATIONS.items() if is_stream(op)}
 FRAGMENTS = {
     d.name.value: d for d in DOCUMENT.definitions if isinstance(d, FragmentDefinitionNode)
 }
@@ -63,7 +79,7 @@ FRAGMENTS = {
 
 def operation_text(name: str) -> str:
     """One operation with only the fragments it uses, so a broken operation fails alone."""
-    needed, todo = {}, [OPERATIONS[name]]
+    needed, todo = {}, [ALL_OPERATIONS[name]]
     while todo:
         spreads = []
 
@@ -76,7 +92,7 @@ def operation_text(name: str) -> str:
             if s not in needed:
                 needed[s] = FRAGMENTS[s]
                 todo.append(FRAGMENTS[s])
-    return print_ast(DocumentNode(definitions=[OPERATIONS[name], *needed.values()]))
+    return print_ast(DocumentNode(definitions=[ALL_OPERATIONS[name], *needed.values()]))
 
 
 def post(body: dict) -> dict:
@@ -86,6 +102,21 @@ def post(body: dict) -> dict:
         pytest.exit(f"Hasura is not running at {HASURA_URL} (docker compose up -d?)", returncode=2)
     assert r.status_code == 200, r.text
     return r.json()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def database_is_the_seed():
+    """The value tests expect exactly the seed chain (blocks 0 to 3). Stop at once with a
+    clear message when the database holds more, e.g. while the mock-blocks service runs."""
+    body = post({"query": "{ stats { indexed_height } }"})
+    height = (body.get("data") or {}).get("stats", [{}])[0].get("indexed_height")
+    if height != 3:
+        pytest.exit(
+            f"the database is not the seed (newest block {height}, expected 3). Stop the mock "
+            "and reset: docker compose stop mock-blocks && docker compose down -v && "
+            "docker compose up -d --build",
+            returncode=2,
+        )
 
 
 @pytest.fixture
