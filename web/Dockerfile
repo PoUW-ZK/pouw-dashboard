@@ -1,5 +1,5 @@
 # Explorer UI: static Vite build served by nginx on port 8080 (non-root)
-FROM node:25-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
