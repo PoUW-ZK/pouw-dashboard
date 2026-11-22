@@ -1,45 +1,36 @@
 import { SectionHeader, StatCard, StatsGrid } from "../../components/ui";
-import type { Stats, Work } from "./api";
-import { number } from "../../lib/formatters";
+import { useMining } from "./api";
+import type { Stats } from "./api";
+import { date, number, sumIntegers } from "../../lib/formatters";
+import { showPouw } from "../../lib/config";
+
 export function NetworkOverview({ stats }: { stats: Stats }) {
   return (
     <section>
       <SectionHeader title="Network overview" />
       <StatsGrid>
         <StatCard label="Indexed height" value={number(stats.indexed_height)} />
-        <StatCard label="Active Buckets" value={number(stats.bucket_count)} />
-        <StatCard
-          label="Registered circuits"
-          value={number(stats.circuit_count)}
-        />
-        <StatCard label="Processed proofs" value={number(stats.proof_count)} />
+        <StatCard label="Blocks" value={number(stats.block_count)} />
+        <StatCard label="Transfers" value={number(stats.transfer_count)} />
+        <StatCard label="Latest block" value={stats.latest_block_time ? date(stats.latest_block_time) : "Waiting for the first block"} />
+        {showPouw && <StatCard label="Registered circuits" value={number(stats.circuit_count)} />}
+        {showPouw && <StatCard label="Processed proofs" value={number(stats.proof_count)} />}
       </StatsGrid>
     </section>
   );
 }
-export function MiningOverview({
-  stats,
-  work,
-}: {
-  stats: Stats;
-  work: Work[];
-}) {
-  const total = work.reduce((sum, item) => sum + Number(item.useful_work), 0);
+
+export function MiningOverview({ stats }: { stats: Stats }) {
+  const work = useMining();
+  const interval = work.data?.stats[0]?.avg_block_interval_s;
+  const total = sumIntegers(...(work.data?.useful_work ?? []).map((row) => row.useful_work));
   return (
     <section>
       <SectionHeader title="Mining overview" />
       <StatsGrid>
-        <StatCard
-          label="Avg. block interval"
-          value={`${number(stats.avg_block_interval_s)}s`}
-        />
-        <StatCard
-          label="Useful work"
-          value={new Intl.NumberFormat("en-US", {
-            notation: "compact",
-            maximumFractionDigits: 1,
-          }).format(total)}
-        />
+        <StatCard label="Avg. block interval" value={interval == null ? "Waiting for more blocks" : `${number(interval)} s`} />
+        <StatCard label="Canonical blocks" value={number(stats.block_count)} />
+        {showPouw && <StatCard label="Useful work" value={work.data ? number(total) : "—"} />}
       </StatsGrid>
     </section>
   );

@@ -22,17 +22,16 @@ export function MiningPage() {
         </Link>
         <PageTitle
           title="Mining"
-          description="Follow the useful computation securing the network."
+          description="Follow block production and each miner’s share of the chain."
         />
       </div>
       {overview.isPending ? (
         <LoadingState />
       ) : overview.isError ? (
         <ErrorState retry={() => void overview.refetch()} />
-      ) : overview.data.stats[0] ? (
+      ) : overview.data?.stats[0] ? (
         <MiningOverview
           stats={overview.data.stats[0]}
-          work={overview.data.useful_work}
         />
       ) : (
         <EmptyState />
@@ -46,7 +45,7 @@ export function MiningPage() {
           <LoadingState />
         ) : miners.isError ? (
           <ErrorState retry={() => void miners.refetch()} />
-        ) : !miners.data.miner_shares.length ? (
+        ) : !miners.data?.miner_shares.length ? (
           <EmptyState />
         ) : (
           <div className="table-scroll">
@@ -63,6 +62,7 @@ export function MiningPage() {
                 {miners.data.miner_shares.map((row) => (
                   <tr key={row.miner}>
                     <td>
+                      {row.label && <span className="miner-label">{row.label}</span>}
                       <AddressLink address={row.miner} />
                     </td>
                     <td>{number(row.blocks)}</td>

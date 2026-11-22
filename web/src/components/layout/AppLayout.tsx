@@ -1,7 +1,7 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { SearchBar } from "../../features/search/SearchBar";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { showPouw } from "../../lib/config";
+import { LiveStatus } from "./LiveStatus";
 export function AppLayout() {
-  const { pathname } = useLocation();
   return (
     <div className="app-shell">
       <header>
@@ -12,7 +12,7 @@ export function AppLayout() {
           {[
             ["/", "Home"],
             ["/blocks", "Blocks"],
-            ["/circuits", "Circuits"],
+            ...(showPouw ? [["/circuits", "Circuits"]] : []),
             ["/mining", "Mining"],
           ].map(([to, label]) => (
             <NavLink key={to} end={to === "/"} to={to}>
@@ -20,8 +20,8 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        {pathname !== "/" && pathname !== "/search" && <SearchBar compact />}
       </header>
+      <LiveStatus />
       <main>
         <Outlet />
       </main>

@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/start-dev.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "node --test --experimental-test-isolation=none tests/*.test.mjs",
+    "test:api": "node scripts/check-api.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

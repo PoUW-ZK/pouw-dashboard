@@ -56,7 +56,7 @@ export function BlocksPage() {
             <BlocksTable blocks={rows} />
             <Pagination
               page={page}
-              hasNext={query.data.blocks.length > limit}
+              hasNext={(query.data?.blocks.length ?? 0) > limit}
               onChange={(next) => change(next, pageRows.at(-1)?.height)}
             />
           </>

@@ -75,7 +75,7 @@ export function CircuitsPage() {
           )}
           <Pagination
             page={page}
-            hasNext={query.data.circuits.length > limit}
+            hasNext={(query.data?.circuits.length ?? 0) > limit}
             onChange={(next) => change(next, rows.at(-1)?.sort_key)}
           />
         </section>

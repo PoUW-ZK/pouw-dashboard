@@ -26,7 +26,7 @@ export function HomePage() {
         <LoadingState />
       ) : overview.isError ? (
         <ErrorState retry={() => void overview.refetch()} />
-      ) : overview.data.stats[0] ? (
+      ) : overview.data?.stats[0] ? (
         <NetworkOverview stats={overview.data.stats[0]} />
       ) : (
         <EmptyState message="No network statistics are available." />
@@ -45,13 +45,12 @@ export function HomePage() {
         ) : blocks.isError ? (
           <ErrorState retry={() => void blocks.refetch()} />
         ) : (
-          <BlocksTable blocks={blocks.data.blocks.slice(0, 4)} preview />
+          <BlocksTable blocks={blocks.data?.blocks.slice(0, 4) ?? []} preview />
         )}
       </section>
       {overview.data?.stats[0] && (
         <MiningOverview
           stats={overview.data.stats[0]}
-          work={overview.data.useful_work}
         />
       )}
     </div>

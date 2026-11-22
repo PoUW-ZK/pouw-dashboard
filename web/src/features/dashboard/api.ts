@@ -1,23 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
-import { hasuraQuery } from "../../lib/hasura";
+import { useExplorerQuery } from "../../lib/useExplorerQuery";
+import type { ChainNumber } from "../../lib/formatters";
+import type { Miner } from "../mining/shares";
+
 export interface Stats {
-  indexed_height: number | null;
-  bucket_count: number | null;
-  circuit_count: number;
-  proof_count: number;
-  avg_block_interval_s: number | null;
+  indexed_height: ChainNumber | null;
+  latest_block_time: string | null;
+  block_count: ChainNumber;
+  transfer_count: ChainNumber;
+  bucket_count: ChainNumber | null;
+  circuit_count: ChainNumber;
+  proof_count: ChainNumber;
 }
 export interface Work {
   proof_system: string;
-  proof_count: number;
-  useful_work: number;
+  proof_count: ChainNumber;
+  useful_work: ChainNumber;
+}
+export interface Mining {
+  stats: { block_count: ChainNumber; avg_block_interval_s: ChainNumber | null }[];
+  miner_shares: Miner[];
+  useful_work: Work[];
 }
 export function useOverview() {
-  return useQuery({
-    queryKey: ["overview"],
-    queryFn: () =>
-      hasuraQuery<{ stats: Stats[]; useful_work: Work[] }>(
-        "query Overview { stats { indexed_height bucket_count circuit_count proof_count avg_block_interval_s } useful_work { proof_system proof_count useful_work } }",
-      ),
-  });
+  return useExplorerQuery<{ stats: Stats[] }>("HomeStats");
+}
+export function useMining() {
+  return useExplorerQuery<Mining>("Mining");
 }

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { showPouw } from "../../lib/config";
 export function SearchBar({
   initialValue = "",
   compact = false,
@@ -23,11 +24,12 @@ export function SearchBar({
         placeholder={
           compact
             ? "Search explorer…"
-            : "Search by block, transaction, address or circuit..."
+            : showPouw ? "Search by block, transaction, address or circuit…" : "Block height, hash, transaction or address…"
         }
         defaultValue={initialValue}
         required
       />
+      <button type="submit" aria-label="Submit search">Search</button>
     </form>
   );
 }

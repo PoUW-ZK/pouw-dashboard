@@ -9,7 +9,7 @@ import {
   LoadingState,
   SectionHeader,
 } from "../components/ui";
-import { SearchBar } from "../features/search/SearchBar";
+import { showPouw } from "../lib/config";
 export function SearchPage() {
   const [params] = useSearchParams();
   const q = params.get("q")?.trim() || "";
@@ -27,13 +27,12 @@ export function SearchPage() {
     <div className="page">
       <PageTitle
         title="Search the network"
-        description="Enter a block height or a complete identifier (blk:, tx:, proof:, circ:, addr:)."
+        description={showPouw ? "Enter a block height or a complete identifier (blk:, tx:, proof:, circ:, addr:)." : "Enter a block height, full hash, transaction ID or address. Prefixed identifiers are also supported."}
       />
-      <SearchBar initialValue={q} />
       <section>
         <SectionHeader title={q ? `Results for “${q}”` : "Search results"} />
         {!q ? (
-          <EmptyState message="Enter a query to get started." />
+          <EmptyState message="Use the search on the home page to get started." />
         ) : query.isPending ? (
           <LoadingState />
         ) : query.isError ? (

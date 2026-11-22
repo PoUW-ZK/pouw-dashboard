@@ -217,3 +217,31 @@ query tests against that Hasura, with the contract from pouw-docs `main`.
 
 The whole network (indexer, Hasura with this metadata, explorer) with your
 local changes: `make dev` in pouw-deploy next to this clone.
+
+
+## Demo frontend and local launcher
+
+The demo frontend subscribes to `HomeStats` and `LatestBlocks` from the existing
+web API contract. Detail/history/mining reads use its HTTP operations and
+refresh when the live tip changes, including reorgs and reconnects. There is no
+30-second polling. The frontend exports the existing allow-listed documents to
+`web/src/graphql/operations.json`; check/update them with
+`python3 web/scripts/sync-operations.py [--check]`.
+
+Demo builds hide Circuits and proof screens. Set `VITE_SHOW_POUW=true` to enable
+them in development, or `VITE_USE_MOCKS=true` for static frontend preview data.
+The three demo miner reward keys can be overridden with the public
+`VITE_NODE_1_MINER_ADDRESS`, `VITE_NODE_2_MINER_ADDRESS` and
+`VITE_NODE_3_MINER_ADDRESS` build arguments.
+
+For a convenient local startup, run `./dev.sh` as your regular user. It resolves
+its own paths, requests sudo for Docker when necessary, builds/starts the
+`dashboard-check` project, verifies the explorer proxy and then starts the
+existing `mock-blocks` service using the upstream `mock` profile. It never
+creates a second block producer or deletes the database.
+
+`./dev.sh preview` starts static frontend sample data at localhost:5173 without
+Docker. `./dev.sh check` runs the frontend checks, `./dev.sh test-api` smoke-tests
+the explorer proxy, and `./dev.sh stop` stops that project while preserving its
+data. See [DEMO_VERIFICATION.md](DEMO_VERIFICATION.md) for the scope and remaining
+staging checks.

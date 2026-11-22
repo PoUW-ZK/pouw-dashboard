@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useBlockDetail } from "../features/details/api";
 import {
   AddressLink,
@@ -8,25 +8,38 @@ import {
   Pagination,
   SectionHeader,
 } from "../components/ui";
-import { useCursorPage } from "../lib/usePage";
 import { date, number, shorten } from "../lib/formatters";
+import { showPouw } from "../lib/config";
+// The shared contract returns up to 100 nested entries. Page that result locally
+// instead of sending cursor variables/documents outside the upstream allow-list.
+function useEntryPage(key: string, limit: number) {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get(key) ?? "1";
+  const page = /^\d{1,5}$/.test(raw) && Number(raw) > 0 ? Number(raw) : 1;
+  return {
+    page, offset: (page - 1) * limit,
+    change(next: number) {
+      setParams((current) => {
+        const result = new URLSearchParams(current);
+        if (next <= 1) result.delete(key);
+        else result.set(key, String(next));
+        return result;
+      });
+    },
+  };
+}
+
 export function BlockDetailsPage() {
   const { id = "" } = useParams();
-  const proofs = useCursorPage("proofAfter");
-  const transfers = useCursorPage("transferAfter");
-  const registrations = useCursorPage("registrationAfter");
   const limit = 6;
-  const query = useBlockDetail(
-    id,
-    transfers.before,
-    registrations.before,
-    proofs.before,
-    limit,
-  );
+  const proofs = useEntryPage("proofPage", limit);
+  const transfers = useEntryPage("transferPage", limit);
+  const registrations = useEntryPage("registrationPage", limit);
+  const query = useBlockDetail(id);
   const block = query.data?.blocks[0];
-  const proofRows = block?.proofs.slice(0, limit) ?? [];
-  const transferRows = block?.transfers.slice(0, limit) ?? [];
-  const registrationRows = block?.registrations.slice(0, limit) ?? [];
+  const proofRows = block?.proofs.slice(proofs.offset, proofs.offset + limit) ?? [];
+  const transferRows = block?.transfers.slice(transfers.offset, transfers.offset + limit) ?? [];
+  const registrationRows = block?.registrations.slice(registrations.offset, registrations.offset + limit) ?? [];
   return (
     <div className="page">
       <Link className="back-link" to="/blocks" aria-label="Back to blocks">
@@ -40,7 +53,7 @@ export function BlockDetailsPage() {
         <EmptyState message="Block not found." />
       ) : (
         <>
-          <h1>Block #{block.height}</h1>
+          <h1>Block #{number(block.height)}</h1>
           <section className="detail-section">
             <SectionHeader title="Block information" />
             <div className="block-information">
@@ -52,11 +65,11 @@ export function BlockDetailsPage() {
                 <div>
                   <dt>Previous block</dt>
                   <dd>
-                    {block.height > 0 && block.prev_hash ? (
+                    {BigInt(block.height) > 0n && block.prev_hash ? (
                       <Link
                         to={`/blocks/${encodeURIComponent(block.prev_hash)}`}
                       >
-                        #{block.height - 1}
+                        #{number(BigInt(block.height) - 1n)}
                       </Link>
                     ) : (
                       "—"
@@ -104,8 +117,9 @@ export function BlockDetailsPage() {
               </dl>
             </div>
           </section>
+          {block.transfers.length >= 100 && <p>This view shows up to 100 transfers from this block.</p>}
           <div className="split-tables">
-            <section>
+            {showPouw && <section>
               <SectionHeader
                 title={`Proof transactions (${block.proof_count})`}
               />
@@ -152,16 +166,14 @@ export function BlockDetailsPage() {
               ) : (
                 <EmptyState message="No proof transactions in this block." />
               )}
-              {(proofs.page > 1 || block.proofs.length > limit) && (
+              {(proofs.page > 1 || block.proofs.length > proofs.offset + limit) && (
                 <Pagination
                   page={proofs.page}
-                  hasNext={block.proofs.length > limit}
-                  onChange={(next) =>
-                    proofs.change(next, proofRows.at(-1)?.sort_key)
-                  }
+                  hasNext={block.proofs.length > proofs.offset + limit}
+                  onChange={proofs.change}
                 />
               )}
-            </section>
+            </section>}
             <section className="transfers-table">
               <SectionHeader
                 title={`Coin transfers (${block.transfer_count})`}
@@ -202,18 +214,16 @@ export function BlockDetailsPage() {
               ) : (
                 <EmptyState message="No coin transfers in this block." />
               )}
-              {(transfers.page > 1 || block.transfers.length > limit) && (
+              {(transfers.page > 1 || block.transfers.length > transfers.offset + limit) && (
                 <Pagination
                   page={transfers.page}
-                  hasNext={block.transfers.length > limit}
-                  onChange={(next) =>
-                    transfers.change(next, transferRows.at(-1)?.sort_key)
-                  }
+                  hasNext={block.transfers.length > transfers.offset + limit}
+                  onChange={transfers.change}
                 />
               )}
             </section>
           </div>
-          <section className="detail-section">
+          {showPouw && <section className="detail-section">
             <SectionHeader
               title={`Circuit registrations (${block.registration_count})`}
             />
@@ -255,16 +265,14 @@ export function BlockDetailsPage() {
             ) : (
               <EmptyState message="No circuit registrations in this block." />
             )}
-            {(registrations.page > 1 || block.registrations.length > limit) && (
+            {(registrations.page > 1 || block.registrations.length > registrations.offset + limit) && (
               <Pagination
                 page={registrations.page}
-                hasNext={block.registrations.length > limit}
-                onChange={(next) =>
-                  registrations.change(next, registrationRows.at(-1)?.sort_key)
-                }
+                hasNext={block.registrations.length > registrations.offset + limit}
+                onChange={registrations.change}
               />
             )}
-          </section>
+          </section>}
         </>
       )}
     </div>

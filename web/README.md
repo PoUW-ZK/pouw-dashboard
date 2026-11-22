@@ -1,10 +1,18 @@
 # PoUW Explorer frontend
 
-React + Vite + TypeScript, with React Router for navigation and TanStack Query for request caching and refresh.
+React + Vite + TypeScript, with React Router for navigation, TanStack Query for caching and Hasura subscriptions for live updates.
 
 ## Development
 
-Run `npm ci`, then `npm run dev` from this directory. The Vite server proxies `/v1/graphql` to Hasura at `http://localhost:8081`. Start the local backend with Docker Compose from the repository root, as described in the root README.
+The simplest startup is `../dev.sh` for the complete Docker stack, or
+`../dev.sh preview` for static frontend sample data without Docker. You can
+invoke the launcher by its absolute path from any directory.
+
+For frontend development against an existing backend, run `npm ci`, then
+`npm run dev` from this directory. The Vite server proxies `/v1/graphql` to
+Hasura at `http://127.0.0.1:8081`. The dev command checks Hasura first and
+prints the startup/preview commands if it is unavailable. Live mode does not
+silently switch to preview data.
 
 `npm run build` checks TypeScript and creates the production bundle in `dist/`. `npm run lint` runs the existing frontend linter. Production nginx supports direct navigation to every frontend route.
 
@@ -17,8 +25,36 @@ Run `npm ci`, then `npm run dev` from this directory. The Vite server proxies `/
 - `pages/`: home, block and circuit lists, mining, search, details, and not-found views.
 - `lib/`: the existing anonymous Hasura client, query cache, formatting, and URL pagination.
 
-The wireframe preview uses deterministic mock data by default, including dashboard statistics, blocks, circuits, mining, search, and detail pages. Copy `.env.example` to `.env.local` and set `VITE_USE_MOCKS=false` to connect to the existing Hasura API. Restart Vite after changing this setting. Balance and mining rewards are preview-only fields; the live API displays a dash for these unavailable values. Queries refresh every 30 seconds. The blocks list uses a height cursor and shows 12 rows per page. Home previews four blocks. Circuit lists and address and circuit histories show 20 rows per page. A block’s transfers, registrations, and proofs have separate cursors. Miner shares display up to 100 rows, matching the anonymous API limit.
+The default connects to Hasura. `VITE_USE_MOCKS=true` explicitly selects
+deterministic frontend sample data, and `VITE_SHOW_POUW=true` enables optional
+proof/circuit screens. Restart Vite after changing these settings. Home and latest blocks use the contract’s subscriptions. Other screens
+use its HTTP documents and refresh when the subscribed chain tip changes;
+there is no periodic polling. Balance and mining rewards
+are preview-only fields; the current live API displays a dash for unavailable
+values. Blocks use height cursors with 12 rows per page, and Home shows four
+blocks. Address/circuit histories show 20 rows per page. Each block's transfer,
+registration and proof lists are paged locally within the contract's
+100-row-per-list limit. Miner shares show up to
+100 indexed miners, with the three configured demo nodes always labeled.
 
-Search accepts block heights and complete prefixed identifiers: `blk:`, `tx:`, `proof:`, `circ:`, and `addr:`. A transaction lookup checks transfers, circuit registrations, and proof requests. Orphaned records remain accessible through their identifiers and show their canonical status.
+Search accepts block heights, raw/0x hashes and prefixed `blk:`, `tx:` and
+`addr:` identifiers. Optional PoUW mode also supports `proof:` and `circ:`.
+Orphaned records remain accessible through their identifiers and show their
+canonical status.
 
 “Useful work” uses the API's `useful_work` view: total constraints represented by canonical proofs. Average block interval covers the canonical chain. Coin transaction counts include transfers and circuit registrations.
+
+
+## Shared API contract
+
+The frontend documents in `src/graphql/operations.json` are exported unchanged
+from the existing Hasura `web-api` allow-list. They introduce no new backend
+operations. After the upstream contract/allow-list changes, run from the repo root:
+
+```bash
+python3 web/scripts/sync-operations.py
+```
+
+The script uses PyYAML from the existing Hasura test requirements. CI checks
+that the exported documents match. The backend generator remains
+`hasura/allowlist.py`; its query, permissions and live-stream tests are unchanged.

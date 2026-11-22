@@ -1,10 +1,8 @@
+import { configuredMiners } from "./features/mining/miners";
+
 // Deterministic presentation data. Set VITE_USE_MOCKS=false to use Hasura.
 const hex = (n: number) => n.toString(16).padStart(64, "0");
-const addresses = [
-  `addr:72a${"0".repeat(58)}9f2`,
-  `addr:4ac${"0".repeat(58)}17e`,
-  `addr:0b3${"0".repeat(58)}8ca`,
-];
+const addresses = configuredMiners.map((row) => row.miner);
 
 const blocks = Array.from({ length: 36 }, (_, i) => ({
   hash: `blk:${hex(12567 - i)}`,
@@ -107,17 +105,6 @@ function pageBySortKey<T extends { sort_key: string }>(
     .slice(0, limit);
 }
 
-function blockEntries<T extends { sort_key: string }>(
-  rows: T[],
-  after: unknown,
-  limit: unknown,
-) {
-  return rows
-    .filter((row) => row.sort_key > String(after))
-    .sort((a, b) => a.sort_key.localeCompare(b.sort_key))
-    .slice(0, Number(limit));
-}
-
 function addressHistory(id: string) {
   return [
     ...transfers
@@ -153,15 +140,18 @@ export function mockQuery(
   query: string,
   variables: Record<string, unknown>,
 ): unknown {
-  const id = String(variables.id);
+  const id = String(variables.id ?? variables.hash ?? variables.txid ?? variables.address ?? variables.miner ?? variables.circuitId ?? variables.proofHash);
   const limit = Number(variables.limit);
   const before = variables.before;
 
-  if (query.includes("query Overview")) {
+  if (query.includes("query HomeStats")) {
     return {
       stats: [
         {
-          indexed_height: 12567,
+          indexed_height: blocks[0].height,
+          latest_block_time: blocks[0].time,
+          block_count: blocks.length,
+          transfer_count: transfers.length,
           bucket_count: 8,
           circuit_count: 132,
           proof_count: 8912,
@@ -175,23 +165,29 @@ export function mockQuery(
       ],
     };
   }
-  if (query.includes("query Miners")) {
+  if (query.includes("query Mining")) {
     return {
+      stats: [{ block_count: blocks.length, avg_block_interval_s: 12.4 }],
+      useful_work: [
+        { proof_system: "groth16", proof_count: 5400, useful_work: 1400000 },
+        { proof_system: "plonk_kzg", proof_count: 2800, useful_work: 800000 },
+        { proof_system: "marlin", proof_count: 712, useful_work: 200000 },
+      ],
       miner_shares: addresses.map((miner, i) => ({
         miner,
-        blocks: [12, 9, 7][i],
-        share: [0.4286, 0.3214, 0.25][i],
+        blocks: blocks.filter((row) => row.miner === miner).length,
+        share: blocks.filter((row) => row.miner === miner).length / blocks.length,
         last_block_height: 12567 - i,
       })),
     };
   }
-  if (query.includes("query Blocks(") || query.includes("query MinedBlocks(")) {
+  if (query.includes("query LatestBlocks(") || query.includes("query Blocks(") || query.includes("query MinedBlocks(")) {
     return {
       blocks: blocks
         .filter(
           (block) =>
-            block.height < Number(before) &&
-            (variables.id == null || block.miner === id),
+            (before == null || BigInt(block.height) < BigInt(String(before))) &&
+            (variables.miner == null || block.miner === id),
         )
         .slice(0, limit),
     };
@@ -272,21 +268,9 @@ export function mockQuery(
       blocks: [
         {
           ...block,
-          transfers: blockEntries(
-            blockTransfers,
-            variables.transferAfter,
-            variables.entryLimit,
-          ),
-          proofs: blockEntries(
-            blockProofs,
-            variables.proofAfter,
-            variables.entryLimit,
-          ),
-          registrations: blockEntries(
-            registrations,
-            variables.registrationAfter,
-            variables.entryLimit,
-          ),
+          transfers: blockTransfers.slice(0, 100),
+          proofs: blockProofs.slice(0, 100),
+          registrations: registrations.slice(0, 100),
           fee_total: [
             ...blockTransfers,
             ...blockProofs,
@@ -317,35 +301,22 @@ export function mockQuery(
     };
   }
   if (query.includes("query AddressTxs(")) {
-    return { address_txs: pageBySortKey(addressHistory(id), before, limit) };
+    const filter = variables.filter as { kind?: { _eq?: string } } | undefined;
+    const rows = addressHistory(id).filter((row) => !filter?.kind?._eq || row.kind === filter.kind._eq);
+    return { address_txs: pageBySortKey(rows, before, limit) };
   }
-  if (query.includes("transfers(where:")) {
+  if (query.includes("query Transaction(")) {
     return {
       transfers: allTransfers.filter((row) => row.txid === id),
-      registrations: circuits.filter((row) => row.txid === id),
-      proofs: proofs
-        .filter((row) => row.request_txid === id)
-        .map(({ proof_hash, height, canonical }) => ({
-          proof_hash,
-          height,
-          canonical,
-        })),
+      circuits: circuits.filter((row) => row.txid === id),
+      proofs: proofs.filter((row) => row.request_txid === id).map(({ proof_hash, height, canonical }) => ({ proof_hash, height, canonical })),
     };
   }
-  if (query.includes("proofs(where:")) {
-    return {
-      proofs: proofs
-        .filter((row) => row.proof_hash === id)
-        .map(({ sort_key: _sortKey, ...row }) => row),
-    };
+  if (query.includes("query Proof(")) {
+    return { proofs: proofs.filter((row) => row.proof_hash === id).map(({ sort_key: _sortKey, ...row }) => row) };
   }
-  if (query.includes("circuits(where:")) {
-    return {
-      circuits: circuits
-        .filter((row) => row.circuit_id === id)
-        .map(circuitWithProofStats)
-        .map(({ sort_key: _sortKey, ...row }) => row),
-    };
+  if (query.includes("query Circuit(")) {
+    return { circuits: circuits.filter((row) => row.circuit_id === id).map(circuitWithProofStats).map(({ sort_key: _sortKey, ...row }) => row) };
   }
   throw new Error("No mock response for this operation");
 }

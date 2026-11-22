@@ -188,6 +188,7 @@ jobs:
           WEB_API_GRAPHQL: docs/contracts/web-api.graphql
         run: |
           pip install -q -r hasura/tests/requirements.txt
+          python web/scripts/sync-operations.py --check
           python -m pytest hasura/tests -p no:cacheprovider -v
 
   # The only required check in the ruleset of main

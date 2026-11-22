@@ -16,6 +16,7 @@ import {
 } from "../features/details/api";
 import { date, number, shorten } from "../lib/formatters";
 import { useCursorPage } from "../lib/usePage";
+import { showPouw } from "../lib/config";
 
 const historyLimit = 20;
 
@@ -79,10 +80,10 @@ function AddressHistory({ id }: { id: string }) {
           ) : (
             <EmptyState message="No transactions found for this address." />
           )}
-          {(page > 1 || query.data.address_txs.length > historyLimit) && (
+          {(page > 1 || (query.data?.address_txs.length ?? 0) > historyLimit) && (
             <Pagination
               page={page}
-              hasNext={query.data.address_txs.length > historyLimit}
+              hasNext={(query.data?.address_txs.length ?? 0) > historyLimit}
               onChange={(next) => change(next, rows.at(-1)?.sort_key)}
             />
           )}
@@ -107,10 +108,10 @@ function MinedBlocks({ id }: { id: string }) {
       ) : (
         <>
           <BlocksTable blocks={rows} />
-          {(page > 1 || query.data.blocks.length > historyLimit) && (
+          {(page > 1 || (query.data?.blocks.length ?? 0) > historyLimit) && (
             <Pagination
               page={page}
-              hasNext={query.data.blocks.length > historyLimit}
+              hasNext={(query.data?.blocks.length ?? 0) > historyLimit}
               onChange={(next) => change(next, rows.at(-1)?.height)}
             />
           )}
@@ -158,10 +159,10 @@ export function AddressDetailsPage() {
                 label="Transfers received"
                 value={number(address.txs_received)}
               />
-              <StatCard
+              {showPouw && <StatCard
                 label="Proof requests answered"
                 value={number(address.proof_requests)}
-              />
+              />}
             </StatsGrid>
             {(address.balance == null || address.mining_rewards == null) && (
               <p>

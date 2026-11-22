@@ -1,17 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { hasuraQuery } from "../../lib/hasura";
-interface Miner {
-  miner: string;
-  blocks: number;
-  share: number;
-  last_block_height: number;
-}
+import { useMining } from "../dashboard/api";
+import { configuredMiners } from "./miners";
+import { mergeMiners } from "./shares";
+
 export function useMiners() {
-  return useQuery({
-    queryKey: ["miners"],
-    queryFn: () =>
-      hasuraQuery<{ miner_shares: Miner[] }>(
-        "query Miners { miner_shares(order_by: [{blocks: desc}, {miner: asc}], limit: 100) { miner blocks share last_block_height } }",
-      ),
-  });
+  const query = useMining();
+  return {
+    ...query,
+    data: query.data && { miner_shares: mergeMiners(query.data.miner_shares, configuredMiners) },
+  };
 }

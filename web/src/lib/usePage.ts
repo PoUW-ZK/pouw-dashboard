@@ -28,8 +28,8 @@ export function useCursorPage(key = "before") {
 }
 
 export function heightCursor(before?: string) {
-  const height = before == null ? NaN : Number(before);
-  return Number.isSafeInteger(height) && height >= 0
-    ? height
-    : Number.MAX_SAFE_INTEGER;
+  // The contract uses an exclusive bound. Keep the cursor exact past 2^53.
+  return before != null && /^\d{1,19}$/.test(before) && BigInt(before) <= 9223372036854775807n
+    ? String(BigInt(before))
+    : "9223372036854775807";
 }

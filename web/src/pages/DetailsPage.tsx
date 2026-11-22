@@ -6,6 +6,8 @@ import type { DetailKind, RecordKind, Value } from "../features/details/api";
 import { PageTitle } from "./PageTitle";
 import { date, number, shorten } from "../lib/formatters";
 import { useCursorPage } from "../lib/usePage";
+import { showPouw } from "../lib/config";
+import { NotFoundPage } from "./NotFoundPage";
 import {
   AddressLink,
   EmptyState,
@@ -45,6 +47,7 @@ function FieldValue({ field, value }: { field: string; value: Value }) {
   if (typeof value === "number") return <>{number(value)}</>;
   if (field === "time" || field === "registered_time")
     return <>{date(value)}</>;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return <>{number(value)}</>;
 
   const route = idRoutes[value.split(":")[0]];
   return route ? (
@@ -110,10 +113,10 @@ function CircuitProofHistory({ id }: { id: string }) {
           ) : (
             <EmptyState message="No canonical proofs found for this circuit." />
           )}
-          {(page > 1 || query.data.proofs.length > limit) && (
+          {(page > 1 || (query.data?.proofs.length ?? 0) > limit) && (
             <Pagination
               page={page}
-              hasNext={query.data.proofs.length > limit}
+              hasNext={(query.data?.proofs.length ?? 0) > limit}
               onChange={(next) => change(next, rows.at(-1)?.sort_key)}
             />
           )}
@@ -137,8 +140,8 @@ function GenericDetailsPage({ kind, id }: { kind: RecordKind; id: string }) {
 
   return (
     <div className="page">
-      <Link className="back-link" to={kind === "circuits" ? "/circuits" : "/"}>
-        ← Back to explorer
+      <Link className="back-link" aria-label="Back to explorer" to={kind === "circuits" ? "/circuits" : "/"}>
+        ⟵
       </Link>
       <PageTitle
         title={
@@ -162,7 +165,7 @@ function GenericDetailsPage({ kind, id }: { kind: RecordKind; id: string }) {
             <section className="detail-panel" key={`${key}-${i}`}>
               <SectionHeader title={titles[key] ?? key} />
               <dl>
-                {Object.entries(row).map(([field, value]) => (
+                {Object.entries(row).filter(([field]) => field !== "sort_key").map(([field, value]) => (
                   <div key={field}>
                     <dt>{fieldLabels[field] ?? field.replaceAll("_", " ")}</dt>
                     <dd>
@@ -185,6 +188,7 @@ function GenericDetailsPage({ kind, id }: { kind: RecordKind; id: string }) {
 
 export function DetailsPage({ kind }: { kind: DetailKind }) {
   const { id = "" } = useParams();
+  if (!showPouw && (kind === "proofs" || kind === "circuits" || /^(proof|circ):/.test(id))) return <NotFoundPage />;
   if (kind === "blocks") return <BlockDetailsPage key={id} />;
   if (kind === "addresses") return <AddressDetailsPage />;
   const recordKind =

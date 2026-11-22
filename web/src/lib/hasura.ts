@@ -1,4 +1,6 @@
 import { mockQuery } from "../mocks";
+import { useMocks } from "./config";
+import { parseGraphQL } from "./parseGraphQL";
 
 type GraphQLResult<TData> = {
   data?: TData;
@@ -9,7 +11,7 @@ export async function hasuraQuery<TData>(
   query: string,
   variables: Record<string, unknown> = {},
 ): Promise<TData> {
-  if (import.meta.env.VITE_USE_MOCKS !== "false") {
+  if (useMocks) {
     return mockQuery(query, variables) as TData;
   }
 
@@ -18,7 +20,7 @@ export async function hasuraQuery<TData>(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
   });
-  const result = (await response.json()) as GraphQLResult<TData>;
+  const result = parseGraphQL<GraphQLResult<TData>>(await response.text());
 
   if (!response.ok || result.errors?.length) {
     const message = result.errors?.map((error) => error.message).join("; ");

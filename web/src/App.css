@@ -5,7 +5,7 @@
   background: white;
 }
 header {
-  height: 60px;
+  min-height: 60px;
   background: #d9d9d9;
   padding: 0 30px;
   display: flex;
@@ -52,6 +52,7 @@ h2 {
   align-items: center;
 }
 .search-bar input {
+  min-width: 0;
   width: 100%;
   height: 100%;
   border: 0;
@@ -90,6 +91,7 @@ h2 {
   color: #222;
 }
 .stat-value {
+  overflow-wrap: anywhere;
   font-size: 32px;
   font-weight: 700;
   margin-top: 17px;
@@ -233,7 +235,7 @@ td:nth-child(3) {
 }
 .block-information dl > div {
   display: grid;
-  grid-template-columns: 1fr 130px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border-bottom: 1px solid #666;
   min-height: 45px;
   align-items: center;
@@ -243,6 +245,7 @@ td:nth-child(3) {
 }
 .block-information dd {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 .split-tables {
   display: grid;
@@ -315,7 +318,7 @@ td:nth-child(3) {
 }
 .detail-panel dl > div {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
   padding: 14px 0;
   border-bottom: 1px solid #888;
   gap: 20px;
@@ -482,4 +485,47 @@ button.table-action {
 }
 header:has(.header-search) nav {
   margin-right: 0;
+}
+
+.app-shell, main, section, .stats-grid, .stat-card, .split-tables, .table-scroll {
+  min-width: 0;
+}
+.stats-grid, .split-tables {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.split-tables:has(> section:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.page-title p {
+  margin-top: 8px;
+  color: #666;
+  overflow-wrap: anywhere;
+}
+.miner-label {
+  display: block;
+  margin-bottom: 6px;
+}
+.live-status {
+  padding: 8px 30px;
+  min-height: 32px;
+  font-size: 14px;
+  color: #555;
+}
+.live-connected { color: #176b37; }
+.live-reconnecting, .live-error { color: #8b3916; background: #fff1df; }
+.search-bar button { margin-right: 8px; flex-shrink: 0; }
+.header-search { width: min(100%, 330px); }
+.header-search button { font-size: 14px; padding: 6px 8px; }
+@media (max-width: 1000px) {
+  header { flex-wrap: wrap; gap: 12px; padding: 16px 20px; }
+  header nav { margin-right: 0; }
+  .header-search { width: 100%; }
+}
+@media (max-width: 700px) {
+  .stats-grid, .split-tables { grid-template-columns: minmax(0, 1fr); }
+  .header-search { height: 44px; }
+  .live-status { padding: 8px 20px; }
+  header nav a, .pagination button { min-height: 44px; display: flex; align-items: center; }
+  .pagination { gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+  .block-information dl > div { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
