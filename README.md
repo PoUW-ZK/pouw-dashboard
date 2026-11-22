@@ -243,5 +243,4 @@ creates a second block producer or deletes the database.
 `./dev.sh preview` starts static frontend sample data at localhost:5173 without
 Docker. `./dev.sh check` runs the frontend checks, `./dev.sh test-api` smoke-tests
 the explorer proxy, and `./dev.sh stop` stops that project while preserving its
-data. See [DEMO_VERIFICATION.md](DEMO_VERIFICATION.md) for the scope and remaining
-staging checks.
+data.
