@@ -2,6 +2,25 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { testServer } from "./helpers.mjs";
 
+test("production always reads Hasura even when the mock build flag is enabled", async (t) => {
+  const server = await testServer(false, true, false);
+  try {
+    const { useMocks } = await server.ssrLoadModule("/src/lib/config.ts");
+    assert.equal(useMocks, false);
+    const { hasuraQuery } = await server.ssrLoadModule("/src/lib/hasura.ts");
+    let requests = 0;
+    t.mock.method(globalThis, "fetch", async (url) => {
+      assert.equal(url, "/v1/graphql");
+      requests++;
+      return { ok: true, text: async () => '{"data":{"blocks":[{"height":12345}]}}' };
+    });
+    assert.deepEqual(await hasuraQuery("query LatestBlocks { blocks { height } }"), {
+      blocks: [{ height: 12345 }],
+    });
+    assert.equal(requests, 1);
+  } finally { await server.close(); }
+});
+
 test("anonymous HTTP queries preserve large amounts and use the same-origin API", async (t) => {
   const server = await testServer(false, false);
   try {

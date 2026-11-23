@@ -25,7 +25,7 @@ silently switch to preview data.
 - `pages/`: home, block and circuit lists, mining, search, details, and not-found views.
 - `lib/`: the existing anonymous Hasura client, query cache, formatting, and URL pagination.
 
-The default connects to Hasura. `VITE_USE_MOCKS=true` explicitly selects
+Production builds always connect to Hasura. During development, `VITE_USE_MOCKS=true` selects
 deterministic frontend sample data, and `VITE_SHOW_POUW=true` enables optional
 proof/circuit screens. Restart Vite after changing these settings. Home and latest blocks use the contract’s subscriptions. Other screens
 use its HTTP documents and refresh when the subscribed chain tip changes;
