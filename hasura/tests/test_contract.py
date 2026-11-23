@@ -161,6 +161,29 @@ def test_block_detail(run):
     assert block["registrations"] == []
 
 
+@pytest.mark.parametrize("label,fees", [
+    ("blk-0", 0), ("blk-1", 1000), ("blk-2", 225),
+    ("blk-3", 120), ("blk-3b", 10),
+])
+def test_seed_block_fees_match_transactions(run, label, fees):
+    block = run("BlockByHash", {"hash": seed_id("blk:", label)})["blocks"][0]
+    transaction_fees = sum(
+        tx["fee"] for kind in ("transfers", "registrations", "proofs") for tx in block[kind]
+    )
+    assert block["fee_total"] == transaction_fees == fees
+
+
+def test_seed_block_counts_match_transactions(run):
+    for row in run("Blocks", {"limit": 20})["blocks"]:
+        detail = run("BlockByHash", {"hash": row["hash"]})["blocks"][0]
+        for counter, transactions in (
+            ("transfer_count", "transfers"),
+            ("registration_count", "registrations"),
+            ("proof_count", "proofs"),
+        ):
+            assert row[counter] == len(detail[transactions]), (row["hash"], counter)
+
+
 def test_orphaned_block_only_by_hash(run):
     by_height = run("BlockByHeight", {"height": 3})["blocks"]
     assert len(by_height) == 1 and by_height[0]["canonical"]

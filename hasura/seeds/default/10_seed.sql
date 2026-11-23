@@ -41,6 +41,25 @@ INSERT INTO proof_txs (block_hash, position, proof_hash, request_txid, circuit_i
 -- each commit; the seed has to call it too. Without 0003 they are plain views, nothing to do.
 DO $$
 BEGIN
+    -- Migration 0010 makes the indexer write these counters instead of calculating
+    -- them in the views. CI applies migrations before this seed, so its backfill
+    -- runs on an empty database. Populate the counters after inserting all rows.
+    -- Local compose still uses the older schema, whose views calculate them.
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'blocks'
+                  AND column_name = 'fee_total') THEN
+        UPDATE blocks b SET
+            transfer_count = (SELECT count(*) FROM transfers t WHERE t.block_hash = b.hash),
+            registration_count = (SELECT count(*) FROM circuits c WHERE c.registered_block = b.hash),
+            proof_count = (SELECT count(*) FROM proof_txs p WHERE p.block_hash = b.hash),
+            transfer_fees = (SELECT coalesce(sum(t.fee), 0) FROM transfers t WHERE t.block_hash = b.hash),
+            fee_total = (SELECT coalesce(sum(t.fee), 0) FROM transfers t WHERE t.block_hash = b.hash)
+                      + (SELECT coalesce(sum(c.fee), 0) FROM circuits c WHERE c.registered_block = b.hash)
+                      + (SELECT coalesce(sum(p.fee), 0) FROM proof_txs p WHERE p.block_hash = b.hash),
+            useful_work = (SELECT coalesce(sum(c.constraint_count), 0)
+                             FROM proof_txs p JOIN circuits c ON c.circuit_id = p.circuit_id
+                            WHERE p.block_hash = b.hash);
+    END IF;
     IF to_regprocedure('api.refresh_stats()') IS NOT NULL THEN
         PERFORM api.refresh_stats();
     END IF;

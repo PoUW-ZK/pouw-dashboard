@@ -127,6 +127,13 @@ def test_new_block_arrives_within_two_seconds(run, add_block):
                 rows = await stream.rows(5)
                 assert [b["height"] for b in rows] == [height], f"expected block {height}, got {rows}"
                 delays.append(time.monotonic() - start)
+                block = run("BlockByHeight", {"height": height})["blocks"][0]
+                fees = sum(
+                    tx["fee"] for kind in ("transfers", "registrations", "proofs")
+                    for tx in block[kind]
+                )
+                assert fees > 0
+                assert block["fee_total"] == fees
         return delays
 
     delays = asyncio.run(scenario())

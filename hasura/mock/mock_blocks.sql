@@ -71,6 +71,24 @@ BEGIN
                substring(sha256(convert_to('mask-' || v_label, 'UTF8')) FROM 1 FOR 31);
     END IF;
 
+    -- Since migration 0010 the indexer writes counters with each block. This
+    -- SQL-only producer must do the same, while supporting the older local schema.
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'blocks'
+                  AND column_name = 'fee_total') THEN
+        UPDATE blocks b SET
+            transfer_count = (SELECT count(*) FROM transfers t WHERE t.block_hash = b.hash),
+            registration_count = 0,
+            proof_count = (SELECT count(*) FROM proof_txs p WHERE p.block_hash = b.hash),
+            transfer_fees = (SELECT coalesce(sum(t.fee), 0) FROM transfers t WHERE t.block_hash = b.hash),
+            fee_total = (SELECT coalesce(sum(t.fee), 0) FROM transfers t WHERE t.block_hash = b.hash)
+                      + (SELECT coalesce(sum(p.fee), 0) FROM proof_txs p WHERE p.block_hash = b.hash),
+            useful_work = (SELECT coalesce(sum(c.constraint_count), 0)
+                             FROM proof_txs p JOIN circuits c ON c.circuit_id = p.circuit_id
+                            WHERE p.block_hash = b.hash)
+        WHERE b.hash = v_hash;
+    END IF;
+
     -- statistics are materialized views since pouw-indexer migration 0003
     IF to_regprocedure('api.refresh_stats()') IS NOT NULL THEN
         PERFORM api.refresh_stats();
